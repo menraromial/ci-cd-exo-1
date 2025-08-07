@@ -39,8 +39,7 @@ class ProductionValidator:
         try:
             # Vérifier que l'image peut être construite
             result = subprocess.run(
-                ["docker", "build", "-t", "python-cicd-test", "."],
-                capture_output=True, text=True, timeout=300
+                ["docker", "build", "-t", "python-cicd-test", "."], capture_output=True, text=True, timeout=300
             )
             if result.returncode == 0:
                 self.log_success("Docker image builds successfully")
@@ -49,13 +48,12 @@ class ProductionValidator:
 
             # Vérifier la taille de l'image
             result = subprocess.run(
-                ["docker", "images", "--format", "table {{.Size}}", "python-cicd-test"],
-                capture_output=True, text=True
+                ["docker", "images", "--format", "table {{.Size}}", "python-cicd-test"], capture_output=True, text=True
             )
             if result.returncode == 0:
-                size_line = result.stdout.strip().split('\n')[-1]
-                if 'MB' in size_line:
-                    size_mb = float(size_line.replace('MB', '').strip())
+                size_line = result.stdout.strip().split("\n")[-1]
+                if "MB" in size_line:
+                    size_mb = float(size_line.replace("MB", "").strip())
                     if size_mb < 200:
                         self.log_success(f"Docker image size is optimized: {size_mb}MB")
                     else:
@@ -64,13 +62,12 @@ class ProductionValidator:
                     self.log_warning(f"Docker image size: {size_line}")
 
             # Vérifier les vulnérabilités avec Trivy si disponible
-            trivy_result = subprocess.run(
-                ["which", "trivy"], capture_output=True
-            )
+            trivy_result = subprocess.run(["which", "trivy"], capture_output=True)
             if trivy_result.returncode == 0:
                 result = subprocess.run(
                     ["trivy", "image", "--severity", "HIGH,CRITICAL", "--exit-code", "1", "python-cicd-test"],
-                    capture_output=True, text=True
+                    capture_output=True,
+                    text=True,
                 )
                 if result.returncode == 0:
                     self.log_success("No high/critical vulnerabilities found")
@@ -81,8 +78,7 @@ class ProductionValidator:
 
             # Vérifier que l'image utilise un utilisateur non-root
             result = subprocess.run(
-                ["docker", "run", "--rm", "python-cicd-test", "whoami"],
-                capture_output=True, text=True, timeout=30
+                ["docker", "run", "--rm", "python-cicd-test", "whoami"], capture_output=True, text=True, timeout=30
             )
             if result.returncode == 0 and "appuser" in result.stdout:
                 self.log_success("Image runs as non-root user")
@@ -100,16 +96,16 @@ class ProductionValidator:
         self.total_checks += 5
 
         chart_path = Path("gitops-example/helm-chart")
-        
+
         # Vérifier que les fichiers Helm existent
         required_files = [
             "Chart.yaml",
             "values.yaml",
             "values-development.yaml",
             "values-staging.yaml",
-            "values-production.yaml"
+            "values-production.yaml",
         ]
-        
+
         for file in required_files:
             if (chart_path / file).exists():
                 self.log_success(f"Helm file exists: {file}")
@@ -119,7 +115,7 @@ class ProductionValidator:
         # Valider la syntaxe YAML
         try:
             for values_file in ["values.yaml", "values-production.yaml"]:
-                with open(chart_path / values_file, 'r') as f:
+                with open(chart_path / values_file, "r") as f:
                     yaml.safe_load(f)
                 self.log_success(f"Valid YAML syntax: {values_file}")
         except Exception as e:
@@ -127,18 +123,18 @@ class ProductionValidator:
 
         # Vérifier la configuration des ressources
         try:
-            with open(chart_path / "values-production.yaml", 'r') as f:
+            with open(chart_path / "values-production.yaml", "r") as f:
                 prod_values = yaml.safe_load(f)
-            
-            resources = prod_values.get('resources', {})
-            if resources.get('limits') and resources.get('requests'):
+
+            resources = prod_values.get("resources", {})
+            if resources.get("limits") and resources.get("requests"):
                 self.log_success("Resource limits and requests are configured")
             else:
                 self.log_error("Missing resource limits or requests")
 
             # Vérifier l'autoscaling
-            autoscaling = prod_values.get('autoscaling', {})
-            if autoscaling.get('enabled') and autoscaling.get('minReplicas', 0) >= 2:
+            autoscaling = prod_values.get("autoscaling", {})
+            if autoscaling.get("enabled") and autoscaling.get("minReplicas", 0) >= 2:
                 self.log_success("Autoscaling properly configured for production")
             else:
                 self.log_warning("Autoscaling not optimally configured")
@@ -155,9 +151,9 @@ class ProductionValidator:
         metrics_file = Path("app/api/metrics.py")
         if metrics_file.exists():
             self.log_success("Metrics endpoint exists")
-            
+
             # Vérifier le contenu du fichier de métriques
-            with open(metrics_file, 'r') as f:
+            with open(metrics_file, "r") as f:
                 content = f.read()
                 if "prometheus_client" in content and "REQUEST_COUNT" in content:
                     self.log_success("Prometheus metrics properly configured")
@@ -189,7 +185,7 @@ class ProductionValidator:
 
             # Vérifier la configuration de sécurité dans les workflows
             for workflow_file in workflow_files:
-                with open(workflow_file, 'r') as f:
+                with open(workflow_file, "r") as f:
                     content = f.read()
                     if "permissions:" in content:
                         self.log_success(f"Security permissions configured in {workflow_file.name}")
@@ -200,11 +196,11 @@ class ProductionValidator:
 
         # Vérifier la configuration de sécurité Kubernetes
         try:
-            with open("gitops-example/helm-chart/values-production.yaml", 'r') as f:
+            with open("gitops-example/helm-chart/values-production.yaml", "r") as f:
                 prod_values = yaml.safe_load(f)
-            
-            security_context = prod_values.get('securityContext', {})
-            if security_context.get('runAsNonRoot') and security_context.get('readOnlyRootFilesystem'):
+
+            security_context = prod_values.get("securityContext", {})
+            if security_context.get("runAsNonRoot") and security_context.get("readOnlyRootFilesystem"):
                 self.log_success("Kubernetes security context properly configured")
             else:
                 self.log_error("Kubernetes security context not properly configured")
@@ -220,14 +216,21 @@ class ProductionValidator:
         try:
             # Essayer de démarrer l'application localement pour tester
             env = os.environ.copy()
-            env['PYTHONPATH'] = 'app'
-            
+            env["PYTHONPATH"] = "app"
+
             # Test simple d'import
             result = subprocess.run(
-                [sys.executable, "-c", "from app.main import create_app; app = create_app(); print('App created successfully')"],
-                capture_output=True, text=True, timeout=10, env=env
+                [
+                    sys.executable,
+                    "-c",
+                    "from app.main import create_app; app = create_app(); print('App created successfully')",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env,
             )
-            
+
             if result.returncode == 0:
                 self.log_success("Application can be imported and created successfully")
             else:
@@ -235,10 +238,17 @@ class ProductionValidator:
 
             # Vérifier que les endpoints sont définis
             result = subprocess.run(
-                [sys.executable, "-c", "from app.main import create_app; app = create_app(); print([rule.rule for rule in app.url_map.iter_rules()])"],
-                capture_output=True, text=True, timeout=10, env=env
+                [
+                    sys.executable,
+                    "-c",
+                    "from app.main import create_app; app = create_app(); print([rule.rule for rule in app.url_map.iter_rules()])",
+                ],
+                capture_output=True,
+                text=True,
+                timeout=10,
+                env=env,
             )
-            
+
             if result.returncode == 0 and "/health" in result.stdout:
                 self.log_success("Health endpoint is configured")
             else:
@@ -251,28 +261,28 @@ class ProductionValidator:
 
     def generate_report(self):
         """Générer le rapport final"""
-        print("\n" + "="*60)
+        print("\n" + "=" * 60)
         print("🎯 VALIDATION REPORT")
-        print("="*60)
-        
+        print("=" * 60)
+
         success_rate = (self.success_count / self.total_checks) * 100 if self.total_checks > 0 else 0
-        
+
         print(f"✅ Successful checks: {self.success_count}/{self.total_checks} ({success_rate:.1f}%)")
         print(f"⚠️  Warnings: {len(self.warnings)}")
         print(f"❌ Errors: {len(self.errors)}")
-        
+
         if self.errors:
             print("\n🚨 ERRORS TO FIX:")
             for error in self.errors:
                 print(f"  • {error}")
-        
+
         if self.warnings:
             print("\n⚠️  WARNINGS TO CONSIDER:")
             for warning in self.warnings:
                 print(f"  • {warning}")
-        
-        print("\n" + "="*60)
-        
+
+        print("\n" + "=" * 60)
+
         if len(self.errors) == 0 and success_rate >= 80:
             print("🎉 PRODUCTION READY! Configuration validation passed.")
             return 0
@@ -286,13 +296,13 @@ class ProductionValidator:
     def run_all_validations(self):
         """Exécuter toutes les validations"""
         print("🚀 Starting Production Configuration Validation...")
-        
+
         self.validate_docker_image()
         self.validate_helm_charts()
         self.validate_monitoring_config()
         self.validate_security_config()
         self.validate_application_health()
-        
+
         return self.generate_report()
 
 
