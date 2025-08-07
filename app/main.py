@@ -33,8 +33,8 @@ def create_app():
 
     @app.after_request
     def after_request(response):
-        if hasattr(g, 'start_time'):
-            endpoint = request.endpoint or 'unknown'
+        if hasattr(g, "start_time"):
+            endpoint = request.endpoint or "unknown"
             method = request.method
             record_request_metrics(response, g.start_time, endpoint, method)
         return response

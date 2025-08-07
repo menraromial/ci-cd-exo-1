@@ -50,14 +50,7 @@ def calculate():
             result = a / b
         else:
             return (
-                jsonify(
-                    {
-                        "error": (
-                            "Unsupported operation. "
-                            "Use: add, subtract, multiply, divide"
-                        )
-                    }
-                ),
+                jsonify({"error": ("Unsupported operation. " "Use: add, subtract, multiply, divide")}),
                 400,
             )
 
