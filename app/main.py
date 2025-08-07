@@ -18,7 +18,7 @@ def create_app():
 
     # Configuration de base
     app.config["DEBUG"] = os.getenv("DEBUG", "false").lower() == "true"
-    app.config["HOST"] = os.getenv("HOST", "0.0.0.0")
+    app.config["HOST"] = os.getenv("HOST", "127.0.0.1")  # Default to localhost for security
     app.config["PORT"] = int(os.getenv("PORT", 5000))
     app.config["VERSION"] = os.getenv("VERSION", "1.0.0")
     app.config["LOG_LEVEL"] = os.getenv("LOG_LEVEL", "INFO")

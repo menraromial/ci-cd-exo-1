@@ -9,6 +9,7 @@ import sys
 import time
 import json
 import subprocess
+import tempfile
 import requests
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -355,10 +356,16 @@ services:
 
         return test_results
 
-    def generate_report(self, results: Dict[str, Any], output_file: str = "/tmp/rollback_recovery_report.json"):
+    def generate_report(self, results: Dict[str, Any], output_file: str = None):
         """Générer un rapport détaillé"""
-        with open(output_file, "w") as f:
-            json.dump(results, f, indent=2, ensure_ascii=False)
+        if output_file is None:
+            # Use secure temporary file instead of hardcoded /tmp
+            with tempfile.NamedTemporaryFile(mode='w', suffix='_rollback_recovery_report.json', delete=False) as f:
+                output_file = f.name
+                json.dump(results, f, indent=2, ensure_ascii=False)
+        else:
+            with open(output_file, "w") as f:
+                json.dump(results, f, indent=2, ensure_ascii=False)
 
         self.log(f"📄 Rapport généré: {output_file}")
 
