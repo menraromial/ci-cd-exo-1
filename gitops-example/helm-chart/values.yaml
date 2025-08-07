@@ -4,7 +4,7 @@
 replicaCount: 2
 
 image:
-  repository: ghcr.io/your-username/your-repo-name
+  repository: ghcr.io/menraromial/python-cicd-pipeline
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
   tag: "latest"
@@ -70,7 +70,7 @@ resources:
     ephemeral-storage: 1Gi
 
 autoscaling:
-  enabled: true
+  enabled: false
   minReplicas: 2
   maxReplicas: 10
   targetCPUUtilizationPercentage: 70
@@ -133,7 +133,7 @@ secrets:
 
 # Network policies for enhanced security
 networkPolicy:
-  enabled: true
+  enabled: false
   ingress:
     enabled: true
     from:
@@ -144,7 +144,7 @@ networkPolicy:
           matchLabels:
             app.kubernetes.io/name: monitoring
   egress:
-    enabled: true
+    enabled: false
     to:
       - namespaceSelector:
           matchLabels:
@@ -158,12 +158,12 @@ networkPolicy:
 
 # Pod Disruption Budget for high availability
 podDisruptionBudget:
-  enabled: true
+  enabled: false
   minAvailable: 1
 
 # Monitoring and metrics configuration
 monitoring:
-  enabled: true
+  enabled: false
   prometheus:
     enabled: true
     port: 8080
