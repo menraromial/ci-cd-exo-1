@@ -1,0 +1,97 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: python-cicd-app
+  namespace: argocd
+  # Add finalizer to ensure proper cleanup
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  # Labels for organization and filtering
+  labels:
+    app.kubernetes.io/name: python-cicd-app
+    app.kubernetes.io/part-of: cicd-pipeline
+spec:
+  # Project configuration
+  project: python-cicd-project
+  
+  # Source configuration - GitOps repository
+  source:
+    repoURL: https://github.com/menraromial/gitops-example.git
+    targetRevision: HEAD
+    path: helm-chart
+    helm:
+      # Use values.yaml from the repository
+      valueFiles:
+        - values.yaml
+      # Additional parameters can be set here
+      parameters: []
+  
+  # Destination configuration
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: python-cicd-app
+  
+  # Sync policy configuration
+  syncPolicy:
+    # Enable automatic sync
+    automated:
+      # Automatically sync when changes are detected
+      prune: true
+      # Enable self-healing to revert manual changes
+      selfHeal: true
+      # Allow empty applications
+      allowEmpty: false
+    
+    # Sync options
+    syncOptions:
+      # Create namespace if it doesn't exist
+      - CreateNamespace=true
+      # Validate resources before applying
+      - Validate=true
+      # Use server-side apply for better conflict resolution
+      - ServerSideApply=true
+      # Respect ignore differences
+      - RespectIgnoreDifferences=true
+      # Apply out of sync only - security measure
+      - ApplyOutOfSyncOnly=true
+      # Replace resources instead of patching for security
+      - Replace=false
+      # Fail on shared resource conflicts
+      - FailOnSharedResource=false
+    
+    # Retry configuration for failed syncs
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  
+  # Ignore differences for certain fields that may change
+  ignoreDifferences:
+    - group: apps
+      kind: Deployment
+      jsonPointers:
+        - /spec/replicas
+    - group: ""
+      kind: Service
+      jsonPointers:
+        - /spec/clusterIP
+    # Ignore managed fields that Kubernetes adds
+    - group: "*"
+      kind: "*"
+      managedFieldsManagers:
+        - kubectl
+        - argocd-application-controller
+  
+  # Health check configuration
+  revisionHistoryLimit: 10
+  
+  # Information about the application
+  info:
+    - name: "Repository"
+      value: "https://github.com/menraromial/gitops-example.git"
+    - name: "Environment"
+      value: "production"
+    - name: "Team"
+      value: "python-cicd-team"

@@ -1,0 +1,43 @@
+version: '3.8'
+
+services:
+  # Application principale
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5000:5000"
+    environment:
+      - FLASK_ENV=development
+      - PYTHONPATH=/app
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - test-network
+
+  # Service de test end-to-end
+  e2e-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      - API_BASE_URL=http://app:5000
+      - PYTHONPATH=/tests
+    volumes:
+      - ./tests:/tests
+      - ./scripts:/scripts
+    networks:
+      - test-network
+    command: ["python", "/scripts/run_e2e_tests.py"]
+
+networks:
+  test-network:
+    driver: bridge

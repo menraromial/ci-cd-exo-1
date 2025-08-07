@@ -1,0 +1,71 @@
+# Staging environment values
+replicaCount: 2
+
+image:
+  tag: "staging-latest"
+
+resources:
+  limits:
+    cpu: 750m
+    memory: 768Mi
+    ephemeral-storage: 1.5Gi
+  requests:
+    cpu: 75m
+    memory: 96Mi
+    ephemeral-storage: 750Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+
+app:
+  debug: false
+  logLevel: "INFO"
+
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring-staging
+
+networkPolicy:
+  enabled: true
+
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+performance:
+  terminationGracePeriodSeconds: 30
+  topologySpreadConstraints:
+    enabled: true
+
+# Staging-specific configurations
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  hosts:
+    - host: python-app-staging.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls:
+    - secretName: python-app-staging-tls
+      hosts:
+        - python-app-staging.example.com
+
+secrets:
+  enabled: true
+  externalSecrets:
+    enabled: true
+    secretStore:
+      name: "vault-staging"
+      kind: "SecretStore"

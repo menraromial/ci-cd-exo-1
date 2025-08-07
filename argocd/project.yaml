@@ -1,0 +1,138 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: python-cicd-project
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: python-cicd-project
+    app.kubernetes.io/part-of: cicd-pipeline
+spec:
+  description: "Project for Python CI/CD pipeline applications"
+  
+  # Source repositories that applications in this project can use
+  sourceRepos:
+    - 'https://github.com/menraromial/gitops-example.git'
+    # Restrict to trusted Helm repositories only
+    - 'https://charts.helm.sh/stable'
+    - 'https://kubernetes-charts.storage.googleapis.com'
+  
+  # Security: Deny access to certain repositories
+  sourceReposDeny:
+    - '*github.com/untrusted-org/*'
+    - '*gitlab.com/public/*'
+  
+  # Destinations where applications can be deployed
+  destinations:
+    - namespace: python-cicd-app
+      server: https://kubernetes.default.svc
+    - namespace: python-cicd-staging
+      server: https://kubernetes.default.svc
+  
+  # Cluster resource whitelist - what cluster-scoped resources can be used
+  clusterResourceWhitelist:
+    - group: ''
+      kind: Namespace
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRole
+    - group: rbac.authorization.k8s.io
+      kind: ClusterRoleBinding
+  
+  # Namespace resource whitelist - what namespaced resources can be used
+  namespaceResourceWhitelist:
+    - group: ''
+      kind: ConfigMap
+    - group: ''
+      kind: Secret
+    - group: ''
+      kind: Service
+    - group: ''
+      kind: ServiceAccount
+    - group: apps
+      kind: Deployment
+    - group: apps
+      kind: ReplicaSet
+    - group: ''
+      kind: Pod
+    - group: networking.k8s.io
+      kind: Ingress
+    - group: networking.k8s.io
+      kind: NetworkPolicy
+    - group: autoscaling
+      kind: HorizontalPodAutoscaler
+    - group: policy
+      kind: PodDisruptionBudget
+    - group: external-secrets.io
+      kind: ExternalSecret
+    - group: external-secrets.io
+      kind: SecretStore
+  
+  # Namespace resource blacklist - explicitly deny dangerous resources
+  namespaceResourceBlacklist:
+    - group: ''
+      kind: PersistentVolume
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
+    - group: security.openshift.io
+      kind: SecurityContextConstraints
+  
+  # Roles for this project
+  roles:
+    - name: developer
+      description: "Developer access to python-cicd applications"
+      policies:
+        - p, proj:python-cicd-project:developer, applications, get, python-cicd-project/*, allow
+        - p, proj:python-cicd-project:developer, applications, sync, python-cicd-project/*, allow
+        - p, proj:python-cicd-project:developer, applications, action/*, python-cicd-project/*, allow
+        - p, proj:python-cicd-project:developer, repositories, get, *, allow
+      groups:
+        - python-cicd-developers
+    
+    - name: admin
+      description: "Admin access to python-cicd applications"
+      policies:
+        - p, proj:python-cicd-project:admin, applications, *, python-cicd-project/*, allow
+        - p, proj:python-cicd-project:admin, repositories, *, *, allow
+        - p, proj:python-cicd-project:admin, clusters, *, *, allow
+      groups:
+        - python-cicd-admins
+  
+  # Security policies
+  signatureKeys:
+    - keyID: "security@company.com"
+  
+  # Orphaned resources policy
+  orphanedResources:
+    warn: true
+    ignore:
+      - group: ''
+        kind: ConfigMap
+        name: 'kube-root-ca.crt'
+      - group: ''
+        kind: Secret
+        name: 'default-token-*'
+  
+  # Sync windows - when automatic sync is allowed
+  syncWindows:
+    - kind: allow
+      schedule: '* * * * *'
+      duration: 24h
+      applications:
+        - '*'
+      manualSync: true
+    - kind: deny
+      schedule: '0 2 * * *'
+      duration: 1h
+      applications:
+        - '*'
+      manualSync: false
+      description: "Maintenance window - no automatic syncs"
+    # Security: Block syncs during business hours for critical changes
+    - kind: deny
+      schedule: '0 9-17 * * 1-5'
+      duration: 8h
+      applications:
+        - 'python-cicd-app-prod'
+      manualSync: true
+      description: "Production changes require manual approval during business hours"

@@ -12,6 +12,7 @@ build/
 develop-eggs/
 dist/
 downloads/
+.kiro/
 eggs/
 .eggs/
 lib/
@@ -205,3 +206,41 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+# Project specific
+# Docker files will be created later
+# Kubernetes manifests will be created later
+# CI/CD files will be created later
+
+# Security - Sensitive files that should never be committed
+*.env
+*.env.*
+.env.local
+.env.production
+.env.staging
+.env.development
+secrets.yaml
+secrets.yml
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.csr
+config/secrets/
+.secrets/
+.credentials/
+
+# Security scan reports
+bandit-report.json
+safety-report.json
+trivy-results.sarif
+security-reports/
+
+# Temporary files that might contain sensitive data
+*.tmp
+*.temp
+*.bak
+*.backup
+*.swp
+*.swo
+*~

@@ -1,0 +1,61 @@
+apiVersion: v1
+kind: Secret
+metadata:
+  name: argocd-webhook-secret
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-webhook-secret
+    app.kubernetes.io/part-of: argocd
+type: Opaque
+data:
+  # Base64 encoded webhook secret - replace with your own secret
+  # Generate with: echo -n "your-webhook-secret" | base64
+  webhook.github.secret: eW91ci13ZWJob29rLXNlY3JldA==
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cmd-params-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Enable webhook support
+  server.webhook.github.secret: argocd-webhook-secret
+  # Reduce sync interval for faster detection
+  timeout.reconciliation: 30s
+  # Enable application refresh on webhook
+  application.instanceLabelKey: argocd.argoproj.io/instance
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: argocd-webhook-ingress
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-webhook-ingress
+    app.kubernetes.io/part-of: argocd
+  annotations:
+    nginx.ingress.kubernetes.io/backend-protocol: "GRPC"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - argocd-webhook.example.com
+      secretName: argocd-webhook-tls
+  rules:
+    - host: argocd-webhook.example.com
+      http:
+        paths:
+          - path: /api/webhook
+            pathType: Prefix
+            backend:
+              service:
+                name: argocd-server
+                port:
+                  number: 80

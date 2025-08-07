@@ -1,0 +1,28 @@
+# Dockerfile pour les tests end-to-end
+FROM python:3.11-slim
+
+# Installer les dépendances système nécessaires
+RUN apt-get update && apt-get install -y \
+    curl \
+    jq \
+    && rm -rf /var/lib/apt/lists/*
+
+# Installer les dépendances Python pour les tests
+RUN pip install --no-cache-dir \
+    requests \
+    pytest \
+    pytest-html \
+    pytest-json-report
+
+# Créer le répertoire de travail
+WORKDIR /tests
+
+# Copier les scripts de test
+COPY scripts/ /scripts/
+COPY tests/ /tests/
+
+# Rendre les scripts exécutables
+RUN chmod +x /scripts/*.py /scripts/*.sh
+
+# Commande par défaut
+CMD ["python", "/scripts/run_e2e_tests.py"]

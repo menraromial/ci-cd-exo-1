@@ -1,0 +1,111 @@
+name: Test and Merge to Main
+
+on:
+  push:
+    branches: [dev]
+  pull_request:
+    branches: [dev]
+
+# Global permissions - minimal by default
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      checks: write  # Pour publier les résultats de tests
+      pull-requests: write  # Pour commenter les PR avec les résultats
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Lint with flake8
+        run: |
+          # Stop the build if there are Python syntax errors or undefined names
+          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
+          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+      - name: Format check with black
+        run: |
+          black --check --diff .
+
+      - name: Security check with bandit
+        run: |
+          pip install bandit[toml]
+          bandit -r app/ -f json -o bandit-report.json || true
+          bandit -r app/ -f txt
+
+      - name: Dependency security check with safety
+        run: |
+          pip install safety
+          safety check --json --output safety-report.json || true
+          safety check
+
+      - name: Run tests with pytest
+        run: |
+          pytest tests/ --cov=app --cov-report=xml --cov-report=html --verbose
+
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v3
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+          fail_ci_if_error: false
+
+      - name: Upload security scan results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: security-reports
+          path: |
+            bandit-report.json
+            safety-report.json
+          retention-days: 30
+
+  auto-merge:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    permissions:
+      contents: write  # Pour merger et pusher vers main
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configure Git
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Merge dev to main
+        run: |
+          git checkout main
+          git merge dev --no-ff -m "Auto-merge dev to main after successful tests"
+          git push origin main

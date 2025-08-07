@@ -1,0 +1,253 @@
+# Default values for python-cicd-app
+# This is a YAML-formatted file.
+
+replicaCount: 2
+
+image:
+  repository: ghcr.io/your-username/your-repo-name
+  pullPolicy: IfNotPresent
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "latest"
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: true
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  fsGroup: 1001
+  runAsGroup: 1001
+  runAsNonRoot: true
+  runAsUser: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1001
+  runAsGroup: 1001
+  seccompProfile:
+    type: RuntimeDefault
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 5000
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 1Gi
+    ephemeral-storage: 2Gi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+    ephemeral-storage: 1Gi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 70
+  targetMemoryUtilizationPercentage: 80
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+      - type: Percent
+        value: 50
+        periodSeconds: 60
+    scaleUp:
+      stabilizationWindowSeconds: 60
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 30
+
+nodeSelector: {}
+
+tolerations: []
+
+affinity: {}
+
+# Health check configuration
+healthCheck:
+  enabled: true
+  path: /health
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Application configuration
+app:
+  debug: false
+  logLevel: "INFO"
+
+# Secrets management
+secrets:
+  # Create secrets from external secret management systems
+  enabled: true
+  # External secrets operator configuration
+  externalSecrets:
+    enabled: false
+    secretStore:
+      name: "vault-backend"
+      kind: "SecretStore"
+  # Manual secrets (for development/testing)
+  manual:
+    # Database credentials (example)
+    database:
+      enabled: false
+      username: ""
+      password: ""
+    # API keys (example)
+    apiKeys:
+      enabled: false
+      externalService: ""
+
+# Network policies for enhanced security
+networkPolicy:
+  enabled: true
+  ingress:
+    enabled: true
+    from:
+      - namespaceSelector:
+          matchLabels:
+            name: ingress-nginx
+      - podSelector:
+          matchLabels:
+            app.kubernetes.io/name: monitoring
+  egress:
+    enabled: true
+    to:
+      - namespaceSelector:
+          matchLabels:
+            name: kube-system
+      - podSelector: {}
+        ports:
+          - protocol: TCP
+            port: 53
+          - protocol: UDP
+            port: 53
+
+# Pod Disruption Budget for high availability
+podDisruptionBudget:
+  enabled: true
+  minAvailable: 1
+
+# Monitoring and metrics configuration
+monitoring:
+  enabled: true
+  prometheus:
+    enabled: true
+    port: 8080
+    path: /metrics
+    scrapeInterval: 30s
+    scrapeTimeout: 10s
+  serviceMonitor:
+    enabled: true
+    namespace: monitoring
+    labels:
+      app: prometheus
+    interval: 30s
+    scrapeTimeout: 10s
+  grafana:
+    enabled: true
+    dashboards:
+      enabled: true
+      namespace: monitoring
+
+# Environment-specific configurations
+environments:
+  development:
+    replicaCount: 1
+    resources:
+      limits:
+        cpu: 500m
+        memory: 512Mi
+      requests:
+        cpu: 50m
+        memory: 64Mi
+    autoscaling:
+      enabled: false
+    app:
+      debug: true
+      logLevel: "DEBUG"
+  
+  staging:
+    replicaCount: 2
+    resources:
+      limits:
+        cpu: 750m
+        memory: 768Mi
+      requests:
+        cpu: 75m
+        memory: 96Mi
+    autoscaling:
+      enabled: true
+      minReplicas: 1
+      maxReplicas: 5
+    app:
+      debug: false
+      logLevel: "INFO"
+  
+  production:
+    replicaCount: 3
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 1Gi
+        ephemeral-storage: 2Gi
+      requests:
+        cpu: 100m
+        memory: 128Mi
+        ephemeral-storage: 1Gi
+    autoscaling:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 10
+    app:
+      debug: false
+      logLevel: "WARNING"
+    monitoring:
+      enabled: true
+
+# Performance and reliability settings
+performance:
+  # Graceful shutdown timeout
+  terminationGracePeriodSeconds: 30
+  # Pod readiness gates
+  readinessGates:
+    enabled: false
+  # Topology spread constraints for better distribution
+  topologySpreadConstraints:
+    enabled: true
+    maxSkew: 1
+    topologyKey: "kubernetes.io/hostname"
+    whenUnsatisfiable: DoNotSchedule

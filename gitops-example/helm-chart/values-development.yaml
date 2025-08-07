@@ -1,0 +1,52 @@
+# Development environment values
+replicaCount: 1
+
+image:
+  tag: "dev-latest"
+
+resources:
+  limits:
+    cpu: 500m
+    memory: 512Mi
+    ephemeral-storage: 1Gi
+  requests:
+    cpu: 50m
+    memory: 64Mi
+    ephemeral-storage: 500Mi
+
+autoscaling:
+  enabled: false
+
+app:
+  debug: true
+  logLevel: "DEBUG"
+
+monitoring:
+  enabled: false
+
+networkPolicy:
+  enabled: false
+
+podDisruptionBudget:
+  enabled: false
+
+performance:
+  terminationGracePeriodSeconds: 10
+  topologySpreadConstraints:
+    enabled: false
+
+# Development-specific configurations
+ingress:
+  enabled: true
+  className: "nginx"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+  hosts:
+    - host: python-app-dev.local
+      paths:
+        - path: /
+          pathType: Prefix
+
+# Enable debug endpoints in development
+secrets:
+  enabled: false

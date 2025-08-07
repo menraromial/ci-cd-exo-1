@@ -1,0 +1,108 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # Custom health check for our Python application
+  resource.customizations.health.apps_Deployment: |
+    hs = {}
+    if obj.status ~= nil then
+      if obj.status.readyReplicas ~= nil and obj.status.replicas ~= nil then
+        if obj.status.readyReplicas == obj.status.replicas then
+          hs.status = "Healthy"
+          hs.message = "All replicas are ready"
+        else
+          hs.status = "Progressing"
+          hs.message = "Waiting for replicas to be ready"
+        end
+      else
+        hs.status = "Progressing"
+        hs.message = "Deployment is starting"
+      end
+    else
+      hs.status = "Progressing"
+      hs.message = "Deployment status unknown"
+    end
+    return hs
+
+  # Custom health check for Services
+  resource.customizations.health.core_Service: |
+    hs = {}
+    if obj.spec.type == "LoadBalancer" then
+      if obj.status.loadBalancer ~= nil and obj.status.loadBalancer.ingress ~= nil and #obj.status.loadBalancer.ingress > 0 then
+        hs.status = "Healthy"
+        hs.message = "LoadBalancer has been provisioned"
+      else
+        hs.status = "Progressing"
+        hs.message = "Waiting for LoadBalancer to be provisioned"
+      end
+    else
+      hs.status = "Healthy"
+      hs.message = "Service is ready"
+    end
+    return hs
+
+  # Application-specific health check
+  resource.customizations.health.apps_Deployment.python-cicd-app: |
+    hs = {}
+    if obj.status ~= nil then
+      if obj.status.readyReplicas ~= nil and obj.status.replicas ~= nil then
+        if obj.status.readyReplicas == obj.status.replicas then
+          -- Additional check for our specific application
+          if obj.status.conditions ~= nil then
+            for i, condition in ipairs(obj.status.conditions) do
+              if condition.type == "Available" and condition.status == "True" then
+                hs.status = "Healthy"
+                hs.message = "Python CI/CD app is healthy and available"
+                return hs
+              end
+            end
+          end
+          hs.status = "Healthy"
+          hs.message = "All replicas are ready"
+        else
+          hs.status = "Progressing"
+          hs.message = "Waiting for replicas to be ready (" .. (obj.status.readyReplicas or 0) .. "/" .. obj.status.replicas .. ")"
+        end
+      else
+        hs.status = "Progressing"
+        hs.message = "Deployment is starting"
+      end
+    else
+      hs.status = "Progressing"
+      hs.message = "Deployment status unknown"
+    end
+    return hs
+
+  # Repository configuration for automatic image updates
+  repositories: |
+    - type: git
+      url: https://github.com/menraromial/gitops-example.git
+    - type: helm
+      url: https://charts.helm.sh/stable
+      name: stable
+
+  # Webhook configuration for faster sync
+  webhook.github.secret: webhook-secret
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-rbac-cm
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: argocd-rbac-cm
+    app.kubernetes.io/part-of: argocd
+data:
+  # RBAC policy for the application
+  policy.default: role:readonly
+  policy.csv: |
+    p, role:python-cicd-admin, applications, *, python-cicd-app/*, allow
+    p, role:python-cicd-admin, repositories, *, *, allow
+    p, role:python-cicd-admin, clusters, *, *, allow
+    g, python-cicd-team, role:python-cicd-admin
