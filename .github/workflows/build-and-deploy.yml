@@ -3,8 +3,6 @@ name: Build and Deploy
 on:
   push:
     branches: [main]
-  pull_request:
-    types: [closed]  # Se déclenche quand une PR est fermée (incluant auto-merge)
   workflow_dispatch: # Permet de déclencher manuellement le workflow
     inputs:
       reason:
@@ -23,15 +21,6 @@ env:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
-    # Condition pour s'exécuter seulement si :
-    # 1. C'est un push sur main, OU
-    # 2. C'est une PR fermée qui a été mergée (incluant auto-merge)
-    if: |
-      github.event_name == 'push' || 
-      (github.event_name == 'pull_request' && 
-       github.event.pull_request.merged == true &&
-       github.event.pull_request.base.ref == 'main')
-    
     permissions:
       contents: read
       packages: write # Pour pusher vers GitHub Container Registry
@@ -39,27 +28,8 @@ jobs:
       actions: read # Pour accéder aux caches GitHub Actions
 
     steps:
-      - name: Log trigger information
-        run: |
-          echo "🔍 Trigger information:"
-          echo "Event name: ${{ github.event_name }}"
-          if [ "${{ github.event_name }}" == "pull_request" ]; then
-            echo "PR merged: ${{ github.event.pull_request.merged }}"
-            echo "PR auto_merge: ${{ github.event.pull_request.auto_merge != null }}"
-            echo "PR base branch: ${{ github.event.pull_request.base.ref }}"
-            echo "PR head SHA: ${{ github.event.pull_request.head.sha }}"
-            if [ "${{ github.event.pull_request.auto_merge != null }}" == "true" ]; then
-              echo "✅ This was an auto-merge!"
-            fi
-          fi
-          echo "Repository: ${{ github.repository }}"
-          echo "SHA: ${{ github.sha }}"
-
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          # Pour les PRs mergées, on veut le code après le merge
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Verify Dockerfile exists
         run: |
@@ -121,8 +91,6 @@ jobs:
             type=ref,event=branch
             type=sha,prefix={{branch}}-
             type=raw,value=latest,enable={{is_default_branch}}
-            # Tag spécial pour les auto-merges
-            type=raw,value=auto-merge-{{sha}},enable=${{ github.event.pull_request.auto_merge != null }}
 
       - name: Build and push Docker image
         id: build
@@ -232,20 +200,16 @@ jobs:
     steps:
       - name: Checkout current repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
 
       - name: Update Helm values (local)
         run: |
           # Create or update local helm values for demonstration
           mkdir -p helm-chart
-          COMMIT_SHA=${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
-          
           if [ ! -f helm-chart/values.yaml ]; then
             cat > helm-chart/values.yaml << EOF
           image:
             repository: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
-            tag: main-${COMMIT_SHA}
+            tag: main-${{ github.sha }}
             pullPolicy: IfNotPresent
 
           service:
@@ -262,30 +226,21 @@ jobs:
           EOF
           else
             # Update existing values.yaml
-            sed -i "s|tag:.*|tag: main-${COMMIT_SHA}|g" helm-chart/values.yaml
+            sed -i "s|tag:.*|tag: main-${{ github.sha }}|g" helm-chart/values.yaml
           fi
 
       - name: Commit updated values (if GitOps repo exists)
         run: |
           # This step would update a GitOps repository if it exists
           # For now, we'll just create a deployment summary
-          COMMIT_SHA=${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
-          echo "Image tag updated to: main-${COMMIT_SHA}"
+          echo "Image tag updated to: main-${{ github.sha }}"
         continue-on-error: true
 
       - name: Create deployment summary
         run: |
-          COMMIT_SHA=${{ github.event_name == 'pull_request' && github.event.pull_request.merge_commit_sha || github.sha }}
-          TRIGGER_TYPE="${{ github.event_name == 'pull_request' && 'Auto-merge/PR merge' || 'Direct push' }}"
-          
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- **Trigger**: ${TRIGGER_TYPE}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${COMMIT_SHA}" >> $GITHUB_STEP_SUMMARY
-          echo "- **Commit**: ${COMMIT_SHA}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Image**: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:main-${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
           echo "- **Branch**: main" >> $GITHUB_STEP_SUMMARY
           echo "- **Status**: ✅ Build completed successfully" >> $GITHUB_STEP_SUMMARY
           echo "- **Next Steps**: Deploy to Kubernetes using ArgoCD" >> $GITHUB_STEP_SUMMARY
-          
-          if [ "${{ github.event.pull_request.auto_merge != null }}" == "true" ]; then
-            echo "- **Note**: ✨ This deployment was triggered by an auto-merge" >> $GITHUB_STEP_SUMMARY
-          fi
