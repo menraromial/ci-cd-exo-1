@@ -1,6 +1,7 @@
 """
 Metrics endpoint for Prometheus monitoring
 """
+
 import time
 import psutil
 from flask import Blueprint, Response
