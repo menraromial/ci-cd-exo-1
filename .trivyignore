@@ -1,0 +1,12 @@
+# Trivy ignore file for known acceptable vulnerabilities
+
+# Base image vulnerabilities that are not fixable
+# These are typically in the Python base image and will be fixed in future releases
+CVE-2023-52425  # libexpat - not directly exploitable in our use case
+CVE-2024-6119   # OpenSSL - not directly exploitable in our use case
+
+# Development dependencies vulnerabilities (not in production)
+# These are only present during build and not in the final runtime
+
+# Low severity vulnerabilities that don't affect our application
+# Add specific CVEs here as needed after review

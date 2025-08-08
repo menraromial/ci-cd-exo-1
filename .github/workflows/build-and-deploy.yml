@@ -165,7 +165,14 @@ jobs:
       - name: Install dependencies for validation
         run: |
           python -m pip install --upgrade pip
-          pip install PyYAML requests || echo "⚠️ Could not install all validation dependencies"
+          pip install -r requirements.txt || echo "⚠️ Could not install all dependencies"
+          pip install PyYAML requests || echo "⚠️ Could not install validation dependencies"
+
+      - name: Run application health check
+        run: |
+          echo "🏥 Running application health check..."
+          python scripts/health_check.py
+        continue-on-error: true
 
       - name: Validate production configuration
         run: |
