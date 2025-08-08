@@ -97,7 +97,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          token: ${{ secrets.PAT_TOKEN || secrets.GITHUB_TOKEN }}
 
       - name: Configure Git
         run: |
@@ -109,3 +109,14 @@ jobs:
           git checkout main
           git merge dev --no-ff -m "Auto-merge dev to main after successful tests"
           git push origin main
+          echo "✅ Successfully merged dev to main"
+          echo "🚀 This should trigger the Build and Deploy workflow"
+
+      - name: Verify merge and trigger
+        run: |
+          echo "## Auto-merge Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Source Branch**: dev" >> $GITHUB_STEP_SUMMARY
+          echo "- **Target Branch**: main" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit SHA**: ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: ✅ Merge completed" >> $GITHUB_STEP_SUMMARY
+          echo "- **Next**: Build and Deploy workflow should trigger automatically" >> $GITHUB_STEP_SUMMARY
