@@ -1,39 +1,27 @@
+# Git
+.git
+.gitignore
+
 # Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
+__pycache__
+*.pyc
+*.pyo
+*.pyd
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+env
+pip-log.txt
+pip-delete-this-directory.txt
+.tox
+.coverage
+.coverage.*
+.pytest_cache
+htmlcov
 
 # Virtual environments
 venv/
-env/
+.venv/
 ENV/
-env.bak/
-venv.bak/
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-.tox/
-.nox/
+env/
 
 # IDE
 .vscode/
@@ -51,10 +39,6 @@ htmlcov/
 ehthumbs.db
 Thumbs.db
 
-# Git
-.git/
-.gitignore
-
 # Documentation
 *.md
 docs/
@@ -63,9 +47,18 @@ docs/
 .github/
 .kiro/
 
-# Logs
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Reports and logs
 *.log
-logs/
+*.report
+bandit-report.json
+safety-report.json
+coverage.xml
+htmlcov/
 
 # Temporary files
 *.tmp
