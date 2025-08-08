@@ -360,7 +360,7 @@ services:
         """Générer un rapport détaillé"""
         if output_file is None:
             # Use secure temporary file instead of hardcoded /tmp
-            with tempfile.NamedTemporaryFile(mode='w', suffix='_rollback_recovery_report.json', delete=False) as f:
+            with tempfile.NamedTemporaryFile(mode="w", suffix="_rollback_recovery_report.json", delete=False) as f:
                 output_file = f.name
                 json.dump(results, f, indent=2, ensure_ascii=False)
         else:
