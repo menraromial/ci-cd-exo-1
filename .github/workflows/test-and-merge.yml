@@ -15,8 +15,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      checks: write  # Pour publier les résultats de tests
-      pull-requests: write  # Pour commenter les PR avec les résultats
+      checks: write # Pour publier les résultats de tests
+      pull-requests: write # Pour commenter les PR avec les résultats
 
     steps:
       - name: Checkout code
@@ -47,21 +47,21 @@ jobs:
           # Exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      # - name: Format check with black
-      #   run: |
-      #     black --check --diff .
+      - name: Format check with black
+        run: |
+          black --check --diff .
 
-      # - name: Security check with bandit
-      #   run: |
-      #     pip install bandit[toml]
-      #     bandit -r app/ -f json -o bandit-report.json || true
-      #     bandit -r app/ -f txt
+      - name: Security check with bandit
+        run: |
+          pip install bandit[toml]
+          bandit -r app/ -f json -o bandit-report.json || true
+          bandit -r app/ -f txt
 
-      # - name: Dependency security check with safety
-      #   run: |
-      #     pip install safety
-      #     safety check --json --output safety-report.json || true
-      #     safety check
+      - name: Dependency security check with safety
+        run: |
+          pip install safety
+          safety check --json --output safety-report.json || true
+          safety check
 
       - name: Run tests with pytest
         run: |
@@ -90,7 +90,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
     permissions:
-      contents: write  # Pour merger et pusher vers main
+      contents: write # Pour merger et pusher vers main
 
     steps:
       - name: Checkout code

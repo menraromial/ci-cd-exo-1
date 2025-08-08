@@ -3,7 +3,7 @@ Endpoint de santé pour l'application Flask
 """
 
 from flask import Blueprint, jsonify
-from datetime import datetime
+from datetime import datetime, timezone
 
 health_bp = Blueprint("health", __name__)
 
@@ -18,7 +18,7 @@ def health_check():
         jsonify(
             {
                 "status": "healthy",
-                "timestamp": datetime.utcnow().isoformat() + "Z",
+                "timestamp": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
                 "version": "1.0.0",
             }
         ),
